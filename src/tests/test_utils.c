@@ -3,7 +3,7 @@
 #define __USE_GNU
 #include <dlfcn.h>
 
-void execute_tests(test_t tests[], size_t test_count) {
+void run_tests(test_t tests[], size_t test_count) {
   pid_t pid[test_count];
   Dl_info info[test_count];
   int wstatus[test_count];

@@ -19,3 +19,7 @@ typedef struct {
 Mat2D mul_Mat2D(const Mat2D *m1, const Mat2D *m2);
 void destroy_Mat2D(Mat2D *m);
 Mat2D new_Mat2D(const size_t rows, const size_t cols);
+Mat2D random_mat(const size_t rows, const size_t cols, const double min, const double max);
+
+// m += s
+void add_scalar_Mat2D(Mat2D *m, const double s);

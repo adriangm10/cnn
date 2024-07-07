@@ -1,3 +1,4 @@
 build/
 mat_tests
+nn_tests
 .clangd

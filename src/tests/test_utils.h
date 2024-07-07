@@ -16,4 +16,4 @@
 
 typedef void (*test_t)(void);
 
-void execute_tests(test_t tests[], size_t test_count);
+void run_tests(test_t tests[], size_t test_count);

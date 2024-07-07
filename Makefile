@@ -14,7 +14,10 @@ $(shell $(MKDIR) build/tests)
 
 all: tests
 
-tests: mat_tests
+tests: mat_tests nn_tests
+
+nn_tests: src/tests/nn_tests.c $(OBJS) $(SRCS) $(HDRS)
+	$(CC) -o $@ src/tests/nn_tests.c $(OBJS) $(FLAGS)
 
 mat_tests: src/tests/mat_tests.c $(OBJS) $(SRCS) $(HDRS)
 	$(CC) -o $@ src/tests/mat_tests.c $(OBJS) $(FLAGS)

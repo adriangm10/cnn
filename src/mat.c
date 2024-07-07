@@ -39,3 +39,27 @@ Mat2D mul_Mat2D(const Mat2D *m1, const Mat2D *m2) {
 
   return res;
 }
+
+Mat2D random_mat(const size_t rows, const size_t cols, const double min, const double max) {
+  Mat2D m = new_Mat2D(rows, cols);
+  const double diff = max - min;
+
+  #pragma omp parallel for
+  for (size_t i = 0; i < m.rows; ++i) {
+    for (size_t j = 0; j < m.cols; ++j) {
+      MAT2D_GET(m, i, j) = (double) random() / (double) RAND_MAX * diff + min;
+    }
+  }
+
+  return m;
+}
+
+// m += s
+void add_scalar_Mat2D(Mat2D *m, const double s) {
+  #pragma omp parallel for
+  for (size_t i = 0; i < m->rows; ++i) {
+    for (size_t j = 0; j < m->cols; ++j) {
+      MAT2D_GET((*m), i, j) += s;
+    }
+  }
+}

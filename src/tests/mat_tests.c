@@ -1,15 +1,6 @@
 #include "mat.h"
 #include "test_utils.h"
 
-void random_mat(const Mat2D *m) {
-  for (size_t i = 0; i < m->rows; ++i) {
-    for (size_t j = 0; j < m->cols; ++j) {
-      MAT2D_GET((*m), i, j) =
-          ((double)rand() / (double)RAND_MAX - 0.5f) * 1000000.0f;
-    }
-  }
-}
-
 void mul_test() {
   Mat2D m1 = new_Mat2D(2, 2);
   Mat2D m2 = new_Mat2D(2, 2);
@@ -39,6 +30,6 @@ void mul_test() {
 
 int main(void) {
   test_t tests[] = {mul_test};
-  execute_tests(tests, 1);
+  run_tests(tests, 1);
   return 0;
 }
