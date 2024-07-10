@@ -16,10 +16,12 @@ typedef struct {
   double *elems;
 } Mat2D;
 
-Mat2D mul_Mat2D(const Mat2D *m1, const Mat2D *m2);
+void mul_Mat2D(const Mat2D *m1, const Mat2D *m2, Mat2D *out);
 void destroy_Mat2D(Mat2D *m);
 Mat2D new_Mat2D(const size_t rows, const size_t cols);
-Mat2D random_mat(const size_t rows, const size_t cols, const double min, const double max);
+void random_init_Mat2D(Mat2D *m, const double min, const double max);
+void zero_init_Mat2D(Mat2D *m);
 
 // m += s
 void add_scalar_Mat2D(Mat2D *m, const double s);
+void print_Mat2D(const Mat2D *m, const char *end);

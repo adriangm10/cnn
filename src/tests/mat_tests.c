@@ -4,6 +4,7 @@
 void mul_test() {
   Mat2D m1 = new_Mat2D(2, 2);
   Mat2D m2 = new_Mat2D(2, 2);
+  Mat2D res = new_Mat2D(2, 2);
 
   m1.elems[0] = 3;
   m1.elems[1] = 2;
@@ -15,7 +16,7 @@ void mul_test() {
   m2.elems[2] = 6;
   m2.elems[3] = 7;
 
-  Mat2D res = mul_Mat2D(&m1, &m2);
+  mul_Mat2D(&m1, &m2, &res);
   assert(res.cols == 2);
   assert(res.rows == 2);
   assert(res.elems[0] == 27);
