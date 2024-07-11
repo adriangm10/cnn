@@ -50,3 +50,4 @@ void nn_init_zero(nn_t *nn);
 nn_t nn_backprop(const nn_t *nn, const Mat2D *y);
 Mat2D nn_layer_output(const layer_t *l);
 Mat2D nn_output(const nn_t *nn);
+void nn_fit(nn_t *nn, const Mat2D *train_data, const Mat2D *labels, double lr);

@@ -83,6 +83,30 @@ static nn_t nn_copy_structure(const nn_t *nn) {
   return cpy;
 }
 
+static void dense_layer_learn(DenseLayer *dl, DenseLayer *g, double lr) {
+  assert(dl->ws.cols == g->ws.cols && dl->ws.rows == g->ws.rows);
+
+  for (size_t i = 0; i < dl->ws.rows; ++i) {
+    for (size_t j = 0; j < dl->ws.cols; ++j) {
+      MAT2D_GET(dl->ws, i, j) -= MAT2D_GET(g->ws, i, j) * lr;
+    }
+  }
+
+  dl->bias -= g->bias * lr;
+}
+
+static void nn_learn(nn_t *nn, const nn_t *g, double lr) {
+  for (size_t l = 1; l < nn->layer_count; ++l) {
+    switch (nn->layers[l].kind) {
+      case DENSE:
+        dense_layer_learn(&nn->layers[l].dl, &g->layers[l].dl, lr);
+        break;
+      default:
+        assert("unreachable" && 0);
+    }
+  }
+}
+
 nn_t new_nn() {
   nn_t nn = (nn_t) {
     .layer_count = 1,
@@ -237,4 +261,29 @@ nn_t nn_backprop(const nn_t *nn, const Mat2D *y) {
   }
 
   return g;
+}
+
+// each row of the train_data is an input
+void nn_fit(nn_t *nn, const Mat2D *train_data, const Mat2D *labels, double lr) {
+  assert(nn_output(nn).cols == labels->cols && nn_output(nn).rows == labels->rows);
+
+  for (size_t i = 0; i < train_data->rows; ++i) {
+    Mat2D x = (Mat2D) {
+      .cols = train_data->cols,
+      .rows = 1,
+      .elems = &train_data->elems[i * train_data->cols],
+    };
+
+    Mat2D y = (Mat2D) {
+      .cols = labels->cols,
+      .rows = 1,
+      .elems = &labels->elems[i * labels->cols],
+    };
+
+    nn_forward(nn, &x);
+    nn_t g = nn_backprop(nn, &y);
+
+    nn_learn(nn, &g, lr);
+    nn_destroy(&g);
+  }
 }
