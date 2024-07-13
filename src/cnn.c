@@ -73,7 +73,7 @@ static nn_t nn_copy_structure(const nn_t *nn) {
     cpy.layers[l].kind = layer.kind;
     switch (layer.kind) {
       case DENSE:
-        add_dense_layer(&cpy, layer.dl.ws.rows, layer.dl.ws.cols, layer.act);
+        nn_add_dense_layer(&cpy, layer.dl.ws.rows, layer.dl.ws.cols, layer.act);
         break;
       default:
         assert("unreachable" && 0);
@@ -83,23 +83,41 @@ static nn_t nn_copy_structure(const nn_t *nn) {
   return cpy;
 }
 
-static void dense_layer_learn(DenseLayer *dl, DenseLayer *g, double lr) {
+static void dense_layer_learn(DenseLayer *dl, DenseLayer *g, size_t batch_size, double lr) {
   assert(dl->ws.cols == g->ws.cols && dl->ws.rows == g->ws.rows);
 
   for (size_t i = 0; i < dl->ws.rows; ++i) {
     for (size_t j = 0; j < dl->ws.cols; ++j) {
-      MAT2D_GET(dl->ws, i, j) -= MAT2D_GET(g->ws, i, j) * lr;
+      MAT2D_GET(dl->ws, i, j) -= MAT2D_GET(g->ws, i, j) * lr / batch_size;
     }
   }
 
-  dl->bias -= g->bias * lr;
+  dl->bias -= g->bias * lr / batch_size;
 }
 
-static void nn_learn(nn_t *nn, const nn_t *g, double lr) {
+static void nn_learn(nn_t *nn, const nn_t *g, size_t batch_size, double lr) {
   for (size_t l = 1; l < nn->layer_count; ++l) {
     switch (nn->layers[l].kind) {
       case DENSE:
-        dense_layer_learn(&nn->layers[l].dl, &g->layers[l].dl, lr);
+        dense_layer_learn(&nn->layers[l].dl, &g->layers[l].dl, batch_size, lr);
+        break;
+      default:
+        assert("unreachable" && 0);
+    }
+  }
+}
+
+// g1 += g2
+static void nn_add_gradient(nn_t *g1, const nn_t *g2) {
+  assert(g1->layer_count == g2->layer_count);
+
+  for(size_t l = 1; l < g1->layer_count; ++l) {
+    assert(g1->layers[l].kind == g2->layers[l].kind);
+
+    switch (g1->layers[l].kind) {
+      case DENSE:
+        sum_Mat2D(&g1->layers[l].dl.ws, &g2->layers[l].dl.ws);
+        g1->layers[l].dl.bias += g2->layers[l].dl.bias;
         break;
       default:
         assert("unreachable" && 0);
@@ -170,7 +188,7 @@ void nn_destroy(nn_t *nn) {
   nn->layer_count = 0;
 }
 
-void add_dense_layer(nn_t *nn, size_t input_size, size_t output_size, ActFun act) {
+void nn_add_dense_layer(nn_t *nn, size_t input_size, size_t output_size, ActFun act) {
   layer_t dl = new_dense_layer(input_size, output_size);
   dl.act = act;
 
@@ -264,8 +282,11 @@ nn_t nn_backprop(const nn_t *nn, const Mat2D *y) {
 }
 
 // each row of the train_data is an input
-void nn_fit(nn_t *nn, const Mat2D *train_data, const Mat2D *labels, double lr) {
-  assert(nn_output(nn).cols == labels->cols && nn_output(nn).rows == labels->rows);
+void nn_fit(nn_t *nn, const Mat2D *train_data, const Mat2D *labels, size_t batch_size, double lr) {
+  assert(nn_output(nn).cols == labels->cols && train_data->rows == labels->rows);
+  assert(batch_size != 0);
+  nn_t total_g = nn_copy_structure(nn);
+  nn_init_zero(&total_g);
 
   for (size_t i = 0; i < train_data->rows; ++i) {
     Mat2D x = (Mat2D) {
@@ -282,8 +303,15 @@ void nn_fit(nn_t *nn, const Mat2D *train_data, const Mat2D *labels, double lr) {
 
     nn_forward(nn, &x);
     nn_t g = nn_backprop(nn, &y);
+    nn_add_gradient(&total_g, &g);
 
-    nn_learn(nn, &g, lr);
+    if (i % batch_size == 0) {
+      nn_learn(nn, &total_g, batch_size, lr);
+      nn_init_zero(&total_g);
+    }
+
     nn_destroy(&g);
   }
+
+  nn_destroy(&total_g);
 }

@@ -69,6 +69,16 @@ void add_scalar_Mat2D(Mat2D *m, const double s) {
   }
 }
 
+// m1 += m2
+void sum_Mat2D(Mat2D *m1, const Mat2D *m2) {
+  #pragma omp parallel for
+  for(size_t i = 0; i < m1->rows; ++i) {
+    for (size_t j = 0; j < m2->rows; ++j) {
+      MAT2D_GET((*m1), i, j) += MAT2D_GET((*m2), i, j);
+    }
+  }
+}
+
 void print_Mat2D(const Mat2D *m, const char *end) {
   for(size_t i = 0; i < m->rows; ++i) {
     printf("[");

@@ -24,4 +24,5 @@ void zero_init_Mat2D(Mat2D *m);
 
 // m += s
 void add_scalar_Mat2D(Mat2D *m, const double s);
+void sum_Mat2D(Mat2D *m1, const Mat2D *m2);
 void print_Mat2D(const Mat2D *m, const char *end);
