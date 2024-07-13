@@ -1,4 +1,5 @@
 build/
+.clangd
 mat_tests
 nn_tests
-.clangd
+xor
