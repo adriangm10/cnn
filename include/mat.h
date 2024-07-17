@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#define MAT2D_GET(mat, i, j) mat.elems[i * mat.cols + j]
+#define MAT2D_GET(mat, i, j) mat.elems[(i) * mat.cols + (j)]
 
 typedef struct mat {
   size_t *dims;

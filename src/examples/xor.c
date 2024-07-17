@@ -1,10 +1,12 @@
 #include "cnn.h"
 #include "mat.h"
+#include <omp.h>
 #include <stdio.h>
 
 #define MAX_EPOCH 10000
 
 int main(void) {
+  omp_set_num_threads(1);
   nn_t xor_nn = new_nn();
   nn_add_dense_layer(&xor_nn, 2, 2, SIGMOID);
   nn_add_dense_layer(&xor_nn, 2, 1, SIGMOID);

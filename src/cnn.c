@@ -9,6 +9,17 @@ static inline double sigmoid(double x) {
   return 1 / (1 + exp(-x));
 }
 
+static void softmax(double *x, size_t x_size) {
+  double sum = 0.0;
+  for (size_t i = 0; i < x_size; ++i) {
+    sum += exp(x[i]);
+  }
+
+  for (size_t i = 0; i < x_size; ++i) {
+    x[i] = exp(x[i]) / sum;
+  }
+}
+
 static inline double activate(double x, ActFun act) {
   switch (act) {
     case SIGMOID: return sigmoid(x);
@@ -23,12 +34,17 @@ static inline double dactf(double a, ActFun act) {
     case SIGMOID: return a * (1.0 - a);
     case RELU: return a > 0.0 ? 1.0 : 0.0;
     case TANH: return 1 - a * a;
-    default:
-      assert(0 && "unreachable");
+    case SOFTMAX: return 1; // suposing it's used in last layer, the derivative with cross entropy loss would be just a - y
+    default: assert(0 && "unreachable");
   }
 }
 
 static void activate_Mat2D(Mat2D *m, ActFun act) {
+  if (act == SOFTMAX) {
+    softmax(m->elems, m->cols);
+    return;
+  }
+
   #pragma omp parallel for
   for (size_t i = 0; i < m->rows; ++i) {
     for (size_t j = 0; j < m->cols; ++j) {
@@ -202,6 +218,8 @@ void nn_add_dense_layer(nn_t *nn, size_t input_size, size_t output_size, ActFun 
 }
 
 void nn_forward(nn_t *nn, const Mat2D *input) {
+  assert(nn->layers[0].kind == _INPUT);
+
   Mat2D m = *input;
   nn->layers[0].il.input = input;
 
@@ -241,21 +259,17 @@ nn_t nn_backprop(const nn_t *nn, const Mat2D *y) {
   nn_t g = nn_copy_structure(nn);
   nn_init_zero(&g);
   layer_t *output_layer = &g.layers[g.layer_count - 1];
-  assert(output_layer->kind == DENSE && "output layer must be a dense layer for the moment");
+  assert(output_layer->kind == DENSE && "output layer must be a dense layer");
   assert(output_layer->dl.a.cols == y->cols && output_layer->dl.a.rows == y->rows);
 
-  if (output_layer->act == SOFTMAX) {
-    assert("softmax is unimplemented" && 0);
-  } else {
-    Mat2D o = nn_output(nn);
-    for (size_t i = 0; i < output_layer->dl.a.cols; ++i) {
-      MAT2D_GET(output_layer->dl.a, 0, i) = MAT2D_GET(o, 0, i) - MAT2D_GET((*y), 0, i);
-    }
+  Mat2D o = nn_output(nn);
+  for (size_t i = 0; i < output_layer->dl.a.cols; ++i) {
+    MAT2D_GET(output_layer->dl.a, 0, i) = MAT2D_GET(o, 0, i) - MAT2D_GET((*y), 0, i);
   }
 
   for (size_t l = g.layer_count - 1; l > 0; --l) {
     if (g.layers[l].kind == DENSE) {
-      #pragma omp parallel for shared(g, nn) // TODO: see if this is worth it with the atomics
+      #pragma omp parallel for shared(g, nn) // TODO: see if this is worth with the atomics
       for (size_t i = 0; i < g.layers[l].dl.a.cols; ++i) {
         const double de = g.layers[l].dl.a.elems[i];
         const double da = dactf(nn->layers[l].dl.a.elems[i], g.layers[l].act);
