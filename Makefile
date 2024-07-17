@@ -6,7 +6,7 @@ FLAGS = -ggdb -Wall -Wextra -lm -fopenmp -rdynamic -I./include/
 HDRS = include/*.h src/tests/test_utils.h
 ODIR = build
 SDIR = src
-SRCS = $(shell find $(SDIR) -name "*.c" -not -path "src/tests/*" -not -path "src/examples/*") src/tests/test_utils.c
+SRCS = $(shell find $(SDIR) -maxdepth 1 -name "*.c") src/tests/test_utils.c
 OBJS = ${SRCS:$(SDIR)/%.c=$(ODIR)/%.o}
 
 $(shell $(MKDIR) build)
@@ -16,7 +16,10 @@ $(shell $(MKDIR) build/examples)
 all: tests examples
 
 # examples
-examples: xor
+examples: xor mnist
+
+mnist: src/examples/mnist.c $(OBJS) $(SRCS) $(HDRS)
+	$(CC) -o $@ src/examples/mnist.c $(OBJS) $(FLAGS)
 
 xor: src/examples/xor.c $(OBJS) $(SRCS) $(HDRS)
 	$(CC) -o $@ src/examples/xor.c $(OBJS) $(FLAGS)

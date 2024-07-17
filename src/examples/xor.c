@@ -10,6 +10,7 @@ int main(void) {
   nn_t xor_nn = new_nn();
   nn_add_dense_layer(&xor_nn, 2, 2, SIGMOID);
   nn_add_dense_layer(&xor_nn, 2, 1, SIGMOID);
+  nn_init_random(&xor_nn, -1.0, 1.0);
 
   double table_input[] = {
     0.0, 0.0,

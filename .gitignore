@@ -3,3 +3,4 @@ build/
 mat_tests
 nn_tests
 xor
+mnist
