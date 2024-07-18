@@ -9,9 +9,20 @@ static inline double sigmoid(double x) {
   return 1 / (1 + exp(-x));
 }
 
+static double vec_max(const double *x, size_t x_size) {
+  double max = x[0];
+  for (size_t i = 1; i < x_size; ++i) {
+    max = max > x[i] ? max : x[i];
+  }
+  return max;
+}
+
 static void softmax(double *x, size_t x_size) {
   double sum = 0.0;
+  double max = vec_max(x, x_size);
+
   for (size_t i = 0; i < x_size; ++i) {
+    x[i] -= max;
     sum += exp(x[i]);
   }
 
