@@ -19,7 +19,7 @@
 #define MAX_TEST 10000
 #define LBL_MN 2049
 #define IMG_MN 2051
-#define MAX_EPOCH 10000
+#define MAX_EPOCH 100
 
 int reverse_int(int i) {
   unsigned char c1, c2, c3, c4;
@@ -110,7 +110,7 @@ Mat2D read_imgs(char *file_name, int from, int to) {
       for (int k = 0; k < cols; ++k) {
         unsigned char temp;
         read(fd, &temp, sizeof(temp));
-        MAT2D_GET(m, i, j * IMG_SIDE + k) = (double) temp;
+        MAT2D_GET(m, i, j * IMG_SIDE + k) = temp / 255.0;
       }
     }
   }
@@ -124,7 +124,7 @@ void print_mnist(const Mat2D *number, const char *end) {
 
   for (size_t i = 0; i < number->rows; ++i) {
     for (size_t j = 0; j < number->cols; ++j) {
-      int c = round(MAT2D_GET((*number), i, j) / 255.0 * 4.0);
+      int c = round(MAT2D_GET((*number), i, j) * 4.0);
       printf("%s", chars[c]);
     }
     puts("");
