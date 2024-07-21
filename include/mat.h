@@ -26,3 +26,5 @@ void zero_init_Mat2D(Mat2D *m);
 void add_scalar_Mat2D(Mat2D *m, const double s);
 void sum_Mat2D(Mat2D *m1, const Mat2D *m2);
 void print_Mat2D(const Mat2D *m, const char *end);
+void vec_Mat2D_mul(const Mat2D *vec, const Mat2D *mat, Mat2D *out);
+void Mat2D_col_mul(const Mat2D *mat, const Mat2D *vec, Mat2D *out);

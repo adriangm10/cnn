@@ -40,6 +40,34 @@ void mul_Mat2D(const Mat2D *m1, const Mat2D *m2, Mat2D *out) {
   }
 }
 
+void vec_Mat2D_mul(const Mat2D *vec, const Mat2D *mat, Mat2D *out) {
+  assert(vec->cols == mat->rows && vec->rows == 1);
+  assert(out->cols == mat->cols && out->rows == 1);
+
+  #pragma omp parallel for shared(vec, mat, out)
+  for (size_t i = 0; i < mat->cols; ++i) {
+    double sum = 0.0;
+    for (size_t j = 0; j < vec->cols; ++j) {
+      sum += vec->elems[j] * MAT2D_GET((*mat), j, i);
+    }
+    out->elems[i] = sum;
+  }
+}
+
+void Mat2D_col_mul(const Mat2D *mat, const Mat2D *vec, Mat2D *out) {
+  assert(vec->rows == mat->cols && vec->cols == 1);
+  assert(out->rows == mat->rows && out->cols == 1);
+
+  #pragma omp parallel for shared(vec, mat, out)
+  for (size_t i = 0; i < mat->rows; ++i) {
+    double sum = 0.0;
+    for (size_t j = 0; j < vec->rows; ++j) {
+      sum += vec->elems[j] * MAT2D_GET((*mat), i, j);
+    }
+    out->elems[i] = sum;
+  }
+}
+
 void random_init_Mat2D(Mat2D *m, const double min, const double max) {
   const double diff = max - min;
 
