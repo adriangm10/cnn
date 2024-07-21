@@ -107,20 +107,20 @@ void backprop_test() {
 
   nn_t g = nn_backprop(&nn, &y);
 
-  printf("backprop test: %.12f\n", g.layers[2].dl.ws.elems[0]);
-  printf("backprop test: %.12f\n", g.layers[2].dl.ws.elems[1]);
-  printf("backprop test: %.12f\n", g.layers[2].dl.ws.elems[2]);
-  printf("backprop test: %.12f\n\n", g.layers[2].dl.ws.elems[3]);
+  printf("2g_11: %.12f\n", g.layers[2].dl.ws.elems[0]);
+  printf("2g_12: %.12f\n", g.layers[2].dl.ws.elems[1]);
+  printf("2g_21: %.12f\n", g.layers[2].dl.ws.elems[2]);
+  printf("2g_22: %.12f\n\n", g.layers[2].dl.ws.elems[3]);
 
   assert(fabs(g.layers[2].dl.ws.elems[0] - (0.082167041)) <= 5e-9);
   assert(fabs(g.layers[2].dl.ws.elems[1] - (-0.022602540)) <= 5e-9);
   assert(fabs(g.layers[2].dl.ws.elems[2] - (0.082667628)) <= 5e-9);
   assert(fabs(g.layers[2].dl.ws.elems[3] - (-0.022740242)) <= 5e-9);
 
-  printf("backprop test: %.12f\n", g.layers[1].dl.ws.elems[0]);
-  printf("backprop test: %.12f\n", g.layers[1].dl.ws.elems[1]);
-  printf("backprop test: %.12f\n", g.layers[1].dl.ws.elems[2]);
-  printf("backprop test: %.12f\n\n", g.layers[1].dl.ws.elems[3]);
+  printf("1g_11: %.12f\n", g.layers[1].dl.ws.elems[0]);
+  printf("1g_12: %.12f\n", g.layers[1].dl.ws.elems[1]);
+  printf("1g_21: %.12f\n", g.layers[1].dl.ws.elems[2]);
+  printf("1g_22: %.12f\n\n", g.layers[1].dl.ws.elems[3]);
 
   assert(fabs(g.layers[1].dl.ws.elems[0] - 0.000438568) <= 6e-9);
   assert(fabs(g.layers[1].dl.ws.elems[1] - 0.000497712) <= 6e-9);
