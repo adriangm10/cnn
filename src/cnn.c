@@ -52,7 +52,7 @@ static inline double dactf(double a, ActFun act) {
 
 static void activate_Mat2D(Mat2D *m, ActFun act) {
   if (act == SOFTMAX) {
-    softmax(m->elems, m->cols);
+    softmax(m->elems, m->cols * m->rows);
     return;
   }
 
@@ -64,13 +64,28 @@ static void activate_Mat2D(Mat2D *m, ActFun act) {
   }
 }
 
-static layer_t new_dense_layer(size_t input_size, size_t output_size) {
+static void activate_col(Mat2D *vec, ActFun act) {
+  assert(vec->cols == 1);
+
+  if (act == SOFTMAX) {
+    softmax(vec->elems, vec->rows);
+    return;
+  }
+
+  #pragma omp parallel for
+  for (size_t i = 0; i < vec->rows; ++i) {
+    vec->elems[i] = activate(vec->elems[i], act);
+  }
+}
+
+static layer_t new_dense_layer(size_t input_size, size_t output_size, ActFun act) {
   layer_t dl = (layer_t) {
     .kind = DENSE,
+    .act = act,
   };
 
   dl.dl = (DenseLayer) {
-    .a = new_Mat2D(1, output_size),
+    .a = new_Mat2D(output_size, 1),
     .ws = new_Mat2D(input_size, output_size),
     .bias = 0.0,
   };
@@ -216,8 +231,7 @@ void nn_destroy(nn_t *nn) {
 }
 
 void nn_add_dense_layer(nn_t *nn, size_t input_size, size_t output_size, ActFun act) {
-  layer_t dl = new_dense_layer(input_size, output_size);
-  dl.act = act;
+  layer_t dl = new_dense_layer(input_size, output_size, act);
 
   if (nn->capacity <= nn->layer_count) {
     nn->capacity *= 1.5;
@@ -232,16 +246,19 @@ void nn_forward(nn_t *nn, const Mat2D *input) {
   assert(nn->layers[0].kind == _INPUT);
 
   Mat2D m = *input;
+  Mat2D ws_t;
   nn->layers[0].il.input = input;
 
   for (size_t l = 1; l < nn->layer_count; ++l) {
     layer_t layer = nn->layers[l];
     switch (layer.kind) {
       case DENSE:
-        mul_Mat2D(&m, &layer.dl.ws, &layer.dl.a);
+        ws_t = transpose_Mat2D(&layer.dl.ws);
+        Mat2D_col_mul(&ws_t, &m, &layer.dl.a);
+        destroy_Mat2D(&ws_t);
 
-        add_scalar_Mat2D(&layer.dl.a, layer.dl.bias);
-        activate_Mat2D(&layer.dl.a, layer.act);
+        add_column_scalar(&layer.dl.a, layer.dl.bias);
+        activate_col(&layer.dl.a, layer.act);
         m = layer.dl.a;
         break;
       default:
@@ -266,22 +283,23 @@ Mat2D nn_output(const nn_t *nn) {
 }
 
 nn_t nn_backprop(const nn_t *nn, const Mat2D *y) {
+  Mat2D o = nn_output(nn);
   assert(nn->layers[0].kind == _INPUT && nn->layers[0].il.input != NULL);
+  assert(nn->layers[nn->layer_count - 1].kind == DENSE && "output layer must be a dense layer");
+  assert(o.cols == y->cols && o.rows == y->rows);
+
   nn_t g = nn_copy_structure(nn);
   nn_init_zero(&g);
-  layer_t *output_layer = &g.layers[g.layer_count - 1];
-  assert(output_layer->kind == DENSE && "output layer must be a dense layer");
-  assert(output_layer->dl.a.cols == y->cols && output_layer->dl.a.rows == y->rows);
+  Mat2D g_o = nn_output(&g);
 
-  Mat2D o = nn_output(nn);
-  for (size_t i = 0; i < output_layer->dl.a.cols; ++i) {
-    MAT2D_GET(output_layer->dl.a, 0, i) = MAT2D_GET(o, 0, i) - MAT2D_GET((*y), 0, i);
+  for (size_t i = 0; i < g_o.rows; ++i) {
+    g_o.elems[i] = o.elems[i] - y->elems[i];
   }
 
   for (size_t l = g.layer_count - 1; l > 0; --l) {
     if (g.layers[l].kind == DENSE) {
-      #pragma omp parallel for shared(g, nn) // TODO: see if this is worth with the atomics
-      for (size_t i = 0; i < g.layers[l].dl.a.cols; ++i) {
+      #pragma omp parallel for shared(g, nn, l) // TODO: see if this is worth with the atomics
+      for (size_t i = 0; i < g.layers[l].dl.a.rows; ++i) {
         const double de = g.layers[l].dl.a.elems[i];
         const double da = dactf(nn->layers[l].dl.a.elems[i], g.layers[l].act);
         const double delta = de * da;
@@ -289,14 +307,13 @@ nn_t nn_backprop(const nn_t *nn, const Mat2D *y) {
         g.layers[l].dl.bias += delta;
 
         Mat2D prev_act = nn_layer_output(&g.layers[l-1]);
-        for(size_t j = 0; j < prev_act.cols; ++j) {
+        for(size_t j = 0; j < prev_act.rows; ++j) {
           const double w = MAT2D_GET(nn->layers[l].dl.ws, j, i);
           const double a = nn_layer_output(&nn->layers[l-1]).elems[j];
           if (l > 1) {
             #pragma omp atomic
             prev_act.elems[j] += w * delta;
           }
-          #pragma omp atomic
           MAT2D_GET(g.layers[l].dl.ws, j, i) += a * delta;
         }
       }
@@ -308,21 +325,21 @@ nn_t nn_backprop(const nn_t *nn, const Mat2D *y) {
 
 // each row of the train_data is an input
 void nn_fit(nn_t *nn, const Mat2D *train_data, const Mat2D *labels, size_t batch_size, double lr) {
-  assert(nn_output(nn).cols == labels->cols && train_data->rows == labels->rows);
+  assert(nn_output(nn).rows == labels->cols && train_data->rows == labels->rows);
   assert(batch_size != 0);
   nn_t total_g = nn_copy_structure(nn);
   nn_init_zero(&total_g);
 
   for (size_t i = 0; i < train_data->rows; ++i) {
     Mat2D x = (Mat2D) {
-      .cols = train_data->cols,
-      .rows = 1,
+      .cols = 1,
+      .rows = train_data->cols,
       .elems = &train_data->elems[i * train_data->cols],
     };
 
     Mat2D y = (Mat2D) {
-      .cols = labels->cols,
-      .rows = 1,
+      .cols = 1,
+      .rows = labels->cols,
       .elems = &labels->elems[i * labels->cols],
     };
 

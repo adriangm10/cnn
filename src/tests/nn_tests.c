@@ -13,8 +13,8 @@ void forward_test() {
 
   assert(nn.layers[1].dl.ws.rows == 2);
   assert(nn.layers[1].dl.ws.cols == 2);
-  assert(nn.layers[1].dl.a.rows == 1);
-  assert(nn.layers[1].dl.a.cols == 2);
+  assert(nn.layers[1].dl.a.rows == 2);
+  assert(nn.layers[1].dl.a.cols == 1);
 
   assert(nn.layers[2].dl.ws.rows == 2);
   assert(nn.layers[2].dl.ws.cols == 1);
@@ -30,14 +30,14 @@ void forward_test() {
   MAT2D_GET(nn.layers[1].dl.ws, 1, 1) = 1.0;
 
   MAT2D_GET(nn.layers[2].dl.ws, 0, 0) = -1.0;
-  MAT2D_GET(nn.layers[2].dl.ws, 1, 0) = 1.0;
+  MAT2D_GET(nn.layers[2].dl.ws, 0, 1) = 1.0;
 
   double i1[] = { 0.0, 1.0 };
   double i2[] = { 1.0, 3.0 };
 
   Mat2D input = (Mat2D) {
-    .rows = 1,
-    .cols = 2,
+    .rows = 2,
+    .cols = 1,
     .elems = i1,
   };
 
@@ -63,13 +63,13 @@ void backprop_test() {
   assert(nn.layer_count == 3); //input, dense, dense
   assert(nn.layers[1].dl.ws.rows == 2);
   assert(nn.layers[1].dl.ws.cols == 2);
-  assert(nn.layers[1].dl.a.rows == 1);
-  assert(nn.layers[1].dl.a.cols == 2);
+  assert(nn.layers[1].dl.a.rows == 2);
+  assert(nn.layers[1].dl.a.cols == 1);
 
   assert(nn.layers[2].dl.ws.rows == 2);
   assert(nn.layers[2].dl.ws.cols == 2);
-  assert(nn.layers[2].dl.a.rows == 1);
-  assert(nn.layers[2].dl.a.cols == 2);
+  assert(nn.layers[2].dl.a.rows == 2);
+  assert(nn.layers[2].dl.a.cols == 1);
 
   nn.layers[1].dl.bias = .35;
   nn.layers[2].dl.bias = .6;
@@ -87,8 +87,8 @@ void backprop_test() {
   double i1[] = { .05, .1 };
 
   Mat2D input = (Mat2D) {
-    .rows = 1,
-    .cols = 2,
+    .cols = 1,
+    .rows = 2,
     .elems = i1,
   };
 
@@ -100,8 +100,8 @@ void backprop_test() {
 
   double y1[] = { 0.01, 0.99 };
   Mat2D y = (Mat2D) {
-    .cols = 2,
-    .rows = 1,
+    .cols = 1,
+    .rows = 2,
     .elems = y1,
   };
 

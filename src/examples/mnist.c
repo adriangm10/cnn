@@ -137,8 +137,8 @@ int main(void) {
   srandom(time(NULL));
   nn_t mnist_nn = new_nn();
   nn_add_dense_layer(&mnist_nn, IMG_SIZE, 32, SIGMOID);
-  nn_add_dense_layer(&mnist_nn, 32, 14, SIGMOID);
-  nn_add_dense_layer(&mnist_nn, 14, 10, SOFTMAX);
+  nn_add_dense_layer(&mnist_nn, 32, 16, SIGMOID);
+  nn_add_dense_layer(&mnist_nn, 16, 10, SOFTMAX);
   nn_init_random(&mnist_nn, -1.0, 1.0);
 
   Mat2D imgs = read_imgs(TRAIN_IMGS, 1, 25);
@@ -151,7 +151,7 @@ int main(void) {
   printf("first img expected output: ");
   print_Mat2D(&((Mat2D) {labels.cols, 1, &labels.elems[first_img * labels.cols]}), "");
 
-  nn_forward(&mnist_nn, &((Mat2D) {imgs.cols, 1, img}));
+  nn_forward(&mnist_nn, &((Mat2D) {1, imgs.cols, img}));
   Mat2D o1 = nn_output(&mnist_nn);
   printf("got (before training): ");
   print_Mat2D(&o1, "\n");
@@ -160,7 +160,7 @@ int main(void) {
     nn_fit(&mnist_nn, &imgs, &labels, 1, 1.0);
   }
 
-  nn_forward(&mnist_nn, &((Mat2D) {imgs.cols, 1, img}));
+  nn_forward(&mnist_nn, &((Mat2D) {1, imgs.cols, img}));
   o1 = nn_output(&mnist_nn);
   printf("got (after training): ");
   print_Mat2D(&o1, "\n");

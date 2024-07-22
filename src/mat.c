@@ -92,6 +92,14 @@ void add_scalar_Mat2D(Mat2D *m, const double s) {
   }
 }
 
+// col += s
+void add_column_scalar(Mat2D *col, const double s) {
+  #pragma omp parallel for
+  for (size_t i = 0; i < col->rows; ++i) {
+    col->elems[i] += s;
+  }
+}
+
 // m1 += m2
 void sum_Mat2D(Mat2D *m1, const Mat2D *m2) {
   assert(m1->cols == m2->cols && m1->rows == m2->rows);
@@ -113,4 +121,17 @@ void print_Mat2D(const Mat2D *m, const char *end) {
     puts(" ]");
   }
   printf("%s", end);
+}
+
+Mat2D transpose_Mat2D(const Mat2D *m) {
+  Mat2D m_t = new_Mat2D(m->cols, m->rows);
+
+  #pragma omp parallel for
+  for (size_t i = 0; i < m->rows; ++i) {
+    for (size_t j = 0; j < m->cols; ++j) {
+      MAT2D_GET(m_t, j, i) = MAT2D_GET((*m), i, j);
+    }
+  }
+
+  return m_t;
 }
