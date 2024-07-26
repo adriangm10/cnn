@@ -160,3 +160,41 @@ void convolution2D(const Mat2D *input, const Mat2D *kernel, int stride, int padd
     }
   }
 }
+
+void max_pooling2D(const Mat2D *input, Mat2D *out, size_t pool_size) {
+  assert(out->cols == input->cols / pool_size && out->rows == input->rows / pool_size);
+
+  for (size_t i = 0; i < out->rows; ++i) {
+    for (size_t j = 0; j < out->cols; ++j) {
+      double max = MAT2D_GET((*input), i * pool_size, j * pool_size);
+
+      for (size_t pi = 0; pi < pool_size; ++pi) {
+        for (size_t pj = 0; pj < pool_size; ++pj) {
+          double val = MAT2D_GET((*input), i * pool_size + pi, j * pool_size + pj);
+          max = max < val ? val : max;
+        }
+      }
+
+      MAT2D_GET((*out), i, j) = max;
+    }
+  }
+}
+
+void avg_pooling2D(const Mat2D *input, Mat2D *out, size_t pool_size) {
+  assert(out->cols == input->cols / pool_size && out->rows == input->rows / pool_size);
+  size_t total_pool_size = pool_size * pool_size;
+
+  for (size_t i = 0; i < out->rows; ++i) {
+    for (size_t j = 0; j < out->cols; ++j) {
+      double sum = 0.0;
+
+      for (size_t pi = 0; pi < pool_size; ++pi) {
+        for (size_t pj = 0; pj < pool_size; ++pj) {
+          sum += MAT2D_GET((*input), i * pool_size + pi, j * pool_size + pj);
+        }
+      }
+
+      MAT2D_GET((*out), i, j) = sum / total_pool_size;
+    }
+  }
+}

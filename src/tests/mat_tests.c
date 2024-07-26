@@ -240,8 +240,76 @@ void conv_2padding_1stride_test() {
   assert(out[42] == 0.0); assert(out[43] == 1.0); assert(out[44] == 1.0); assert(out[45] == 1.0); assert(out[46] == 1.0); assert(out[47] == 0.0); assert(out[48] == 0.0);
 }
 
+void max_pooling_test() {
+  double i1[] = {
+    1.2, 1.5, 2.1, 0.0, 0.0,
+    0.0, 1.0, 1.0, 1.0, 0.0,
+    0.0, 0.0, 1.0, 1.0, 1.0,
+    0.0, 0.0, 1.0, 1.0, 0.0,
+    0.0, 1.0, 1.0, 0.0, 0.0,
+  };
+
+  Mat2D input = {
+    .cols = 5,
+    .rows = 5,
+    .elems = i1,
+  };
+
+  double out[4];
+  Mat2D output = {
+    .cols = 2,
+    .rows = 2,
+    .elems = out,
+  };
+
+  max_pooling(&input, &output, 2);
+
+  print_Mat2D(&output, "\n");
+
+  assert(out[0] == 1.5); assert(out[1] == 2.1);
+  assert(out[2] == 0.0); assert(out[3] == 1.0);
+}
+
+void avg_pooling_test() {
+  double i1[] = {
+    1.2, 1.5, 2.1, 0.0, 0.0,
+    0.0, 1.0, 1.0, 1.0, 0.0,
+    0.0, 0.0, 1.0, 1.0, 1.0,
+    0.0, 0.0, 1.0, 1.0, 0.0,
+    0.0, 1.0, 1.0, 0.0, 0.0,
+  };
+
+  Mat2D input = {
+    .cols = 5,
+    .rows = 5,
+    .elems = i1,
+  };
+
+  double out[4];
+  Mat2D output = {
+    .cols = 2,
+    .rows = 2,
+    .elems = out,
+  };
+
+  avg_pooling(&input, &output, 2);
+
+  print_Mat2D(&output, "\n");
+
+  assert(out[0] == 0.925); assert(out[1] == 1.025);
+  assert(out[2] == 0.0); assert(out[3] == 1.0);
+}
+
 int main(void) {
-  test_t tests[] = {mul_test, conv_0padding_1stride_test, conv_0padding_2stride_test, conv_2padding_1stride_test};
-  run_tests(tests, 4);
+  test_t tests[] = {
+    mul_test,
+    conv_0padding_1stride_test,
+    conv_0padding_2stride_test,
+    conv_2padding_1stride_test,
+    max_pooling_test,
+    avg_pooling_test,
+  };
+
+  run_tests(tests, 6);
   return 0;
 }
