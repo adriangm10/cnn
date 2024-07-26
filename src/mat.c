@@ -135,3 +135,28 @@ Mat2D transpose_Mat2D(const Mat2D *m) {
 
   return m_t;
 }
+
+void convolution2D(const Mat2D *input, const Mat2D *kernel, int stride, int padding, Mat2D *out) {
+  assert(stride > 0);
+  assert(out->rows == (input->rows - kernel->rows + 2 * padding) / stride + 1);
+  assert(out->cols == (input->cols - kernel->cols + 2 * padding) / stride + 1);
+
+  for (size_t r = 0; r < out->rows; ++r) {
+    for (size_t c = 0; c < out->cols; ++c) {
+      double sum = 0.0;
+
+      for (size_t kr = 0; kr < kernel->rows; ++kr) {
+        for (size_t kc = 0; kc < kernel->cols; ++kc) {
+          int row = (int) r * stride - padding + kr;
+          int col = (int) c * stride - padding + kc;
+
+          if (row >= 0 && row < (int) input->rows && col >= 0 && col < (int) input->cols) {
+            sum += MAT2D_GET((*input), row, col) * MAT2D_GET((*kernel), kr, kc);
+          }
+        }
+      }
+
+      MAT2D_GET((*out), r, c) = sum;
+    }
+  }
+}

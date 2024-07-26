@@ -30,3 +30,4 @@ Mat2D transpose_Mat2D(const Mat2D *m);
 void add_column_scalar(Mat2D *col, const double s);
 void Mat2D_col_mul(const Mat2D *mat, const Mat2D *vec, Mat2D *out);
 void vec_Mat2D_mul(const Mat2D *vec, const Mat2D *mat, Mat2D *out);
+void convolution2D(const Mat2D *input, const Mat2D *kernel, int stride, int padding, Mat2D *out);

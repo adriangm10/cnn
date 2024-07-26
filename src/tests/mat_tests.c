@@ -108,8 +108,140 @@ void vec_mul_performance() {
   destroy_Mat2D(&out1);
 }
 
+void conv_0padding_1stride_test() {
+  double i1[] = {
+    1.2, 1.5, 2.1, 0.0, 0.0,
+    0.0, 1.0, 1.0, 1.0, 0.0,
+    0.0, 0.0, 1.0, 1.0, 1.0,
+    0.0, 0.0, 1.0, 1.0, 0.0,
+    0.0, 1.0, 1.0, 0.0, 0.0,
+  };
+
+  double f1[] = {
+    1.0, 0.0, 1.0,
+    0.0, 1.0, 0.0,
+    1.0, 0.0, 1.0
+  };
+
+  Mat2D input = {
+    .cols = 5,
+    .rows = 5,
+    .elems = i1,
+  };
+
+  Mat2D filter = {
+    .cols = 3,
+    .rows = 3,
+    .elems = f1,
+  };
+
+  double out[9];
+  Mat2D output = {
+    .cols = 3,
+    .rows = 3,
+    .elems = out,
+  };
+
+  convolution2D(&input, &filter, 1, 0, &output);
+
+  print_Mat2D(&output, "\n");
+
+  assert(out[0] == 5.3); assert(out[1] == 3.5); assert(out[2] == 5.1);
+  assert(out[3] == 2.0); assert(out[4] == 4.0); assert(out[5] == 3.0);
+  assert(out[6] == 2.0); assert(out[7] == 3.0); assert(out[8] == 4.0);
+}
+
+void conv_0padding_2stride_test() {
+  double i1[] = {
+    1.2, 1.5, 2.1, 0.0, 0.0,
+    0.0, 1.0, 1.0, 1.0, 0.0,
+    0.0, 0.0, 1.0, 1.0, 1.0,
+    0.0, 0.0, 1.0, 1.0, 0.0,
+    0.0, 1.0, 1.0, 0.0, 0.0,
+  };
+
+  double f1[] = {
+    1.0, 0.0, 1.0,
+    0.0, 1.0, 0.0,
+    1.0, 0.0, 1.0
+  };
+
+  Mat2D input = {
+    .cols = 5,
+    .rows = 5,
+    .elems = i1,
+  };
+
+  Mat2D filter = {
+    .cols = 3,
+    .rows = 3,
+    .elems = f1,
+  };
+
+  double out[4];
+  Mat2D output = {
+    .cols = 2,
+    .rows = 2,
+    .elems = out,
+  };
+
+  convolution2D(&input, &filter, 2, 0, &output);
+
+  print_Mat2D(&output, "\n");
+
+  assert(out[0] == 5.3); assert(out[1] == 5.1);
+  assert(out[2] == 2.0); assert(out[3] == 4.0);
+}
+
+void conv_2padding_1stride_test() {
+  double i1[] = {
+    1.2, 1.5, 2.1, 0.0, 0.0,
+    0.0, 1.0, 1.0, 1.0, 0.0,
+    0.0, 0.0, 1.0, 1.0, 1.0,
+    0.0, 0.0, 1.0, 1.0, 0.0,
+    0.0, 1.0, 1.0, 0.0, 0.0,
+  };
+
+  double f1[] = {
+    1.0, 0.0, 1.0,
+    0.0, 1.0, 0.0,
+    1.0, 0.0, 1.0
+  };
+
+  Mat2D input = {
+    .cols = 5,
+    .rows = 5,
+    .elems = i1,
+  };
+
+  Mat2D filter = {
+    .cols = 3,
+    .rows = 3,
+    .elems = f1,
+  };
+
+  double out[49];
+  Mat2D output = {
+    .cols = 7,
+    .rows = 7,
+    .elems = out,
+  };
+
+  convolution2D(&input, &filter, 1, 2, &output);
+
+  print_Mat2D(&output, "\n");
+
+  assert(out[0] == 1.2);  assert(out[1] == 1.5);  assert(out[2] == 3.3);  assert(out[3] == 1.5);  assert(out[4] == 2.1);  assert(out[5] == 0.0);  assert(out[6] == 0.0);
+  assert(out[7] == 0.0);  assert(out[8] == 2.2);  assert(out[9] == 2.5);  assert(out[10] == 4.1); assert(out[11] == 1.0); assert(out[12] == 1.0); assert(out[13] == 0.0);
+  assert(out[14] == 1.2); assert(out[15] == 1.5); assert(out[16] == 5.3); assert(out[17] == 3.5); assert(out[18] == 5.1); assert(out[19] == 1.0); assert(out[20] == 1.0);
+  assert(out[21] == 0.0); assert(out[22] == 1.0); assert(out[23] == 2.0); assert(out[24] == 4.0); assert(out[25] == 3.0); assert(out[26] == 3.0); assert(out[27] == 0.0);
+  assert(out[28] == 0.0); assert(out[29] == 1.0); assert(out[30] == 2.0); assert(out[31] == 3.0); assert(out[32] == 4.0); assert(out[33] == 1.0); assert(out[34] == 1.0);
+  assert(out[35] == 0.0); assert(out[36] == 0.0); assert(out[37] == 2.0); assert(out[38] == 2.0); assert(out[39] == 1.0); assert(out[40] == 1.0); assert(out[41] == 0.0);
+  assert(out[42] == 0.0); assert(out[43] == 1.0); assert(out[44] == 1.0); assert(out[45] == 1.0); assert(out[46] == 1.0); assert(out[47] == 0.0); assert(out[48] == 0.0);
+}
+
 int main(void) {
-  test_t tests[] = {mul_test, mul_performace, vec_mul_performance};
-  run_tests(tests, 3);
+  test_t tests[] = {mul_test, conv_0padding_1stride_test, conv_0padding_2stride_test, conv_2padding_1stride_test};
+  run_tests(tests, 4);
   return 0;
 }
