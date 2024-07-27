@@ -135,7 +135,7 @@ void print_mnist(const Mat2D *number, const char *end) {
 int main(void) {
   omp_set_num_threads(1);
   srandom(time(NULL));
-  nn_t mnist_nn = new_nn();
+  nn_t mnist_nn = new_nn(IMG_SIZE, 1, 0);
   nn_add_dense_layer(&mnist_nn, IMG_SIZE, 32, SIGMOID);
   nn_add_dense_layer(&mnist_nn, 32, 16, SIGMOID);
   nn_add_dense_layer(&mnist_nn, 16, 10, SOFTMAX);

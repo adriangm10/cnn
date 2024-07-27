@@ -6,7 +6,7 @@
 #define NN_OUTPUT(nn) nn.layers[nn.layer_count - 1].dl.a
 
 void forward_test() {
-  nn_t nn = new_nn();
+  nn_t nn = new_nn(2, 1, 1);
 
   nn_add_dense_layer(&nn, 2, 2, RELU);
   nn_add_dense_layer(&nn, 2, 1, RELU);
@@ -56,7 +56,7 @@ void forward_test() {
 }
 
 void backprop_test() {
-  nn_t nn = new_nn();
+  nn_t nn = new_nn(2, 1, 1);
   nn_add_dense_layer(&nn, 2, 2, SIGMOID);
   nn_add_dense_layer(&nn, 2, 2, SIGMOID);
 
@@ -132,7 +132,7 @@ void backprop_test() {
 }
 
 void fit_test() {
-  nn_t nn = new_nn();
+  nn_t nn = new_nn(2, 1, 1);
   nn_add_dense_layer(&nn, 2, 2, SIGMOID);
   nn_add_dense_layer(&nn, 2, 2, SIGMOID);
 

@@ -51,11 +51,6 @@ static inline double dactf(double a, ActFun act) {
 }
 
 static void activate_Mat2D(Mat2D *m, ActFun act) {
-  if (act == SOFTMAX) {
-    softmax(m->elems, m->cols * m->rows);
-    return;
-  }
-
   #pragma omp parallel for
   for (size_t i = 0; i < m->rows; ++i) {
     for (size_t j = 0; j < m->cols; ++j) {
@@ -64,17 +59,17 @@ static void activate_Mat2D(Mat2D *m, ActFun act) {
   }
 }
 
-static void activate_col(Mat2D *vec, ActFun act) {
-  assert(vec->cols == 1);
+static void activate_col(Mat2D *col, ActFun act) {
+  assert(col->cols == 1);
 
   if (act == SOFTMAX) {
-    softmax(vec->elems, vec->rows);
+    softmax(col->elems, col->rows);
     return;
   }
 
   #pragma omp parallel for
-  for (size_t i = 0; i < vec->rows; ++i) {
-    vec->elems[i] = activate(vec->elems[i], act);
+  for (size_t i = 0; i < col->rows; ++i) {
+    col->elems[i] = activate(col->elems[i], act);
   }
 }
 
@@ -96,6 +91,81 @@ static layer_t new_dense_layer(size_t input_size, size_t output_size, ActFun act
 static void destroy_dense_layer(DenseLayer *dl) {
   destroy_Mat2D(&dl->a);
   destroy_Mat2D(&dl->ws);
+}
+
+static layer_t new_conv2d_layer(size_t kernel_count, size_t kernel_size, size_t channels, int padding, int stride, ActFun act) {
+  Conv2dLayer cl = {
+    .channels = channels,
+    .kernel_count = kernel_count,
+    .padding = padding,
+    .stride = stride,
+    .kernels = (Mat2D *) malloc(sizeof(Mat2D) * kernel_count * channels),
+    .a = NULL,
+  };
+
+  return (layer_t) {
+    .kind = CONV2D,
+    .act = act,
+    .cl = cl,
+  };
+}
+
+static void destroy_conv2d_layer(Conv2dLayer *l) {
+  for (size_t k = 0; k < l->kernel_count * l->channels; ++k) {
+    destroy_Mat2D(&l->kernels[k]);
+  }
+  free(l->kernels);
+  l->kernels = NULL;
+
+  if (!l->a) return;
+  for (size_t a = 0; a < l->kernel_count; ++a) {
+    destroy_Mat2D(&l->a[a]);
+  }
+  free(l->a);
+  l->a = NULL;
+}
+
+static layer_t new_pooling_layer(size_t pool_size, enum layer_kind kind) {
+  PoolingLayer pl = {
+    .channels = -1,
+    .pool_size = pool_size,
+    .a = NULL,
+  };
+
+  return (layer_t) {
+    .kind = kind,
+    .pl = pl,
+  };
+}
+
+static void destroy_pooling_layer(PoolingLayer *l) {
+  for (size_t a = 0; a < l->channels; ++a) {
+    destroy_Mat2D(&l->a[a]);
+  }
+  free(l->a);
+  l->a = NULL;
+  l->channels = -1;
+};
+
+static layer_t new_flatten_layer() {
+  return (layer_t) {
+    .kind = FLATTEN,
+    .fl = (FlattenLayer) { .a.elems = NULL },
+  };
+}
+
+static void destroy_flatten_layer(FlattenLayer *l) {
+  destroy_Mat2D(&l->a);
+}
+
+static void append_layer(nn_t *nn, layer_t l) {
+  if (nn->capacity <= nn->layer_count) {
+    nn->capacity *= 1.5;
+    nn->layers = (layer_t *) realloc(nn->layers, sizeof(layer_t) * nn->capacity);
+    assert(nn->layers != NULL && "not enough memory");
+  }
+
+  nn->layers[nn->layer_count++] = l;
 }
 
 static nn_t nn_copy_structure(const nn_t *nn) {
@@ -167,7 +237,7 @@ static void nn_add_gradient(nn_t *g1, const nn_t *g2) {
   }
 }
 
-nn_t new_nn() {
+nn_t new_nn(size_t height, size_t width, size_t channels) {
   nn_t nn = (nn_t) {
     .layer_count = 1,
     .capacity = 10,
@@ -178,6 +248,9 @@ nn_t new_nn() {
 
   nn.layers[0].kind = _INPUT;
   nn.layers[0].il.input = NULL;
+  nn.layers[0].il.width = width;
+  nn.layers[0].il.height = height;
+  nn.layers[0].il.channels = channels;
 
   return nn;
 }
@@ -233,13 +306,25 @@ void nn_destroy(nn_t *nn) {
 void nn_add_dense_layer(nn_t *nn, size_t input_size, size_t output_size, ActFun act) {
   layer_t dl = new_dense_layer(input_size, output_size, act);
 
-  if (nn->capacity <= nn->layer_count) {
-    nn->capacity *= 1.5;
-    nn->layers = (layer_t *) realloc(nn->layers, sizeof(layer_t) * nn->capacity);
-    assert(nn->layers != NULL && "not enough memory");
-  }
+  append_layer(nn, dl);
+}
 
-  nn->layers[nn->layer_count++] = dl;
+void nn_add_conv2d_layer(nn_t *nn, size_t kernel_count, size_t kernel_size, size_t channels, int padding, int stride, ActFun act) {
+  layer_t conv = new_conv2d_layer(kernel_count, kernel_size, channels, padding, stride, act);
+
+  append_layer(nn, conv);
+}
+
+void nn_add_pooling_layer(nn_t *nn, size_t pool_size, enum layer_kind kind) {
+  layer_t l = new_pooling_layer(pool_size, kind);
+
+  append_layer(nn, l);
+}
+
+void nn_add_flatten_layer(nn_t *nn) {
+  layer_t l = new_flatten_layer();
+
+  append_layer(nn, l);
 }
 
 void nn_forward(nn_t *nn, const Mat2D *input) {
@@ -260,6 +345,14 @@ void nn_forward(nn_t *nn, const Mat2D *input) {
         add_column_scalar(&layer.dl.a, layer.dl.bias);
         activate_col(&layer.dl.a, layer.act);
         m = layer.dl.a;
+        break;
+      case CONV2D:
+        break;
+      case MAX_POOL:
+        break;
+      case AVG_POOL:
+        break;
+      case FLATTEN:
         break;
       default:
         assert("unreachable" && 0);

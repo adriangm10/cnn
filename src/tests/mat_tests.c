@@ -262,7 +262,7 @@ void max_pooling_test() {
     .elems = out,
   };
 
-  max_pooling(&input, &output, 2);
+  max_pooling2D(&input, &output, 2);
 
   print_Mat2D(&output, "\n");
 
@@ -292,7 +292,7 @@ void avg_pooling_test() {
     .elems = out,
   };
 
-  avg_pooling(&input, &output, 2);
+  avg_pooling2D(&input, &output, 2);
 
   print_Mat2D(&output, "\n");
 
