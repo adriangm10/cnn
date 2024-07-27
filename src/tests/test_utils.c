@@ -14,7 +14,7 @@ void run_tests(test_t tests[], size_t test_count) {
     switch ((pid = fork())) {
     case -1:
       perror("error running tests");
-      break;
+      exit(EXIT_FAILURE);
     case 0:
       tests[i]();
       exit(EXIT_SUCCESS);
