@@ -73,15 +73,14 @@ static void activate_col(Mat2D *col, ActFun act) {
   }
 }
 
-static layer_t new_dense_layer(size_t input_size, size_t output_size, ActFun act) {
+static layer_t new_dense_layer(size_t size, ActFun act) {
   layer_t dl = (layer_t) {
     .kind = DENSE,
     .act = act,
   };
 
   dl.dl = (DenseLayer) {
-    .a = new_Mat2D(output_size, 1),
-    .ws = new_Mat2D(input_size, output_size),
+    .a = new_Mat2D(size, 1),
     .bias = 0.0,
   };
 
@@ -95,8 +94,8 @@ static void destroy_dense_layer(DenseLayer *dl) {
 
 static layer_t new_conv2d_layer(size_t kernel_count, size_t kernel_size, size_t channels, int padding, int stride, ActFun act) {
   Conv2dLayer cl = {
-    .channels = channels,
     .kernel_count = kernel_count,
+    .channels = channels,
     .padding = padding,
     .stride = stride,
     .kernels = (Mat2D *) malloc(sizeof(Mat2D) * kernel_count * channels),
@@ -155,7 +154,7 @@ static layer_t new_flatten_layer() {
 }
 
 static void destroy_flatten_layer(FlattenLayer *l) {
-  destroy_Mat2D(&l->a);
+  if (l->a.elems) destroy_Mat2D(&l->a);
 }
 
 static void append_layer(nn_t *nn, layer_t l) {
@@ -173,7 +172,7 @@ static nn_t nn_copy_structure(const nn_t *nn) {
 
   nn_t cpy = (nn_t) {
     .capacity = nn->capacity,
-    .layer_count = 1,
+    .layer_count = nn->layer_count,
     .layers = (layer_t *) malloc(sizeof(layer_t) * nn->capacity),
   };
 
@@ -185,7 +184,10 @@ static nn_t nn_copy_structure(const nn_t *nn) {
     cpy.layers[l].kind = layer.kind;
     switch (layer.kind) {
       case DENSE:
-        nn_add_dense_layer(&cpy, layer.dl.ws.rows, layer.dl.ws.cols, layer.act);
+        cpy.layers[l].dl.a = new_Mat2D(layer.dl.a.rows, layer.dl.a.cols);
+        cpy.layers[l].dl.ws = new_Mat2D(layer.dl.ws.rows, layer.dl.ws.cols);
+        cpy.layers[l].dl.bias = 0.0;
+        cpy.layers[l].act = layer.act;
         break;
       default:
         assert("unreachable" && 0);
@@ -303,8 +305,8 @@ void nn_destroy(nn_t *nn) {
   nn->layer_count = 0;
 }
 
-void nn_add_dense_layer(nn_t *nn, size_t input_size, size_t output_size, ActFun act) {
-  layer_t dl = new_dense_layer(input_size, output_size, act);
+void nn_add_dense_layer(nn_t *nn, size_t size, ActFun act) {
+  layer_t dl = new_dense_layer(size, act);
 
   append_layer(nn, dl);
 }
@@ -315,8 +317,14 @@ void nn_add_conv2d_layer(nn_t *nn, size_t kernel_count, size_t kernel_size, size
   append_layer(nn, conv);
 }
 
-void nn_add_pooling_layer(nn_t *nn, size_t pool_size, enum layer_kind kind) {
-  layer_t l = new_pooling_layer(pool_size, kind);
+void nn_add_max_pooling_layer(nn_t *nn, size_t pool_size) {
+  layer_t l = new_pooling_layer(pool_size, MAX_POOL);
+
+  append_layer(nn, l);
+}
+
+void nn_add_avg_pooling_layer(nn_t *nn, size_t pool_size) {
+  layer_t l = new_pooling_layer(pool_size, AVG_POOL);
 
   append_layer(nn, l);
 }
@@ -325,6 +333,50 @@ void nn_add_flatten_layer(nn_t *nn) {
   layer_t l = new_flatten_layer();
 
   append_layer(nn, l);
+}
+
+void nn_compile(nn_t *nn) {
+  size_t width, height, channels, flatten_size;
+
+  for (size_t l = 0; l < nn->layer_count; ++l) {
+    layer_t *layer = &nn->layers[l];
+    switch (layer->kind) {
+      case _INPUT:
+        width = layer->il.width;
+        height = layer->il.height;
+        channels = layer->il.channels;
+        if (width == 1) flatten_size = width * height;
+        break;
+      case DENSE:
+        layer->dl.ws = new_Mat2D(flatten_size, layer->dl.a.rows);
+        flatten_size = layer->dl.a.rows;
+        break;
+      case CONV2D:
+        height = (height - layer->cl.kernels[0].rows + 2 * layer->cl.padding) / layer->cl.stride + 1;
+        width = (width - layer->cl.kernels[0].cols + 2 * layer->cl.padding) / layer->cl.stride + 1;
+
+        for (size_t i = 0; i < layer->cl.kernel_count; ++i) {
+          layer->cl.a[i] = new_Mat2D(height, width);
+        }
+        channels = layer->cl.kernel_count;
+        break;
+      case MAX_POOL:
+      case AVG_POOL:
+        layer->pl.channels = channels;
+        width = width / layer->pl.pool_size;
+        height = height / layer->pl.pool_size;
+
+        for (size_t c = 0; c < channels; ++c) {
+          layer->pl.a[c] = new_Mat2D(height, width);
+        }
+        break;
+      case FLATTEN:
+        flatten_size = height * width * channels;
+        layer->fl.a = new_Mat2D(flatten_size, 1);
+        break;
+      default: assert(0 && "unreachable");
+    }
+  }
 }
 
 void nn_forward(nn_t *nn, const Mat2D *input) {

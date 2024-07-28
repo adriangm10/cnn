@@ -8,8 +8,9 @@
 int main(void) {
   omp_set_num_threads(1);
   nn_t xor_nn = new_nn(2, 1, 1);
-  nn_add_dense_layer(&xor_nn, 2, 2, SIGMOID);
-  nn_add_dense_layer(&xor_nn, 2, 1, SIGMOID);
+  nn_add_dense_layer(&xor_nn, 2, SIGMOID);
+  nn_add_dense_layer(&xor_nn, 1, SIGMOID);
+  nn_compile(&xor_nn);
   nn_init_random(&xor_nn, -1.0, 1.0);
 
   double table_input[] = {

@@ -8,8 +8,9 @@
 void forward_test() {
   nn_t nn = new_nn(2, 1, 1);
 
-  nn_add_dense_layer(&nn, 2, 2, RELU);
-  nn_add_dense_layer(&nn, 2, 1, RELU);
+  nn_add_dense_layer(&nn, 2, RELU);
+  nn_add_dense_layer(&nn, 1, RELU);
+  nn_compile(&nn);
 
   assert(nn.layers[1].dl.ws.rows == 2);
   assert(nn.layers[1].dl.ws.cols == 2);
@@ -57,8 +58,9 @@ void forward_test() {
 
 void backprop_test() {
   nn_t nn = new_nn(2, 1, 1);
-  nn_add_dense_layer(&nn, 2, 2, SIGMOID);
-  nn_add_dense_layer(&nn, 2, 2, SIGMOID);
+  nn_add_dense_layer(&nn, 2, SIGMOID);
+  nn_add_dense_layer(&nn, 2, SIGMOID);
+  nn_compile(&nn);
 
   assert(nn.layer_count == 3); //input, dense, dense
   assert(nn.layers[1].dl.ws.rows == 2);
@@ -133,8 +135,9 @@ void backprop_test() {
 
 void fit_test() {
   nn_t nn = new_nn(2, 1, 1);
-  nn_add_dense_layer(&nn, 2, 2, SIGMOID);
-  nn_add_dense_layer(&nn, 2, 2, SIGMOID);
+  nn_add_dense_layer(&nn, 2, SIGMOID);
+  nn_add_dense_layer(&nn, 2, SIGMOID);
+  nn_compile(&nn);
 
   nn.layers[1].dl.bias = .35;
   nn.layers[2].dl.bias = .6;
