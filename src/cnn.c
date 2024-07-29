@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <omp.h>
+#include <string.h>
 
 static inline double sigmoid(double x) {
   return 1 / (1 + exp(-x));
@@ -246,7 +247,7 @@ static void nn_add_gradient(nn_t *g1, const nn_t *g2) {
   }
 }
 
-nn_t new_nn(size_t height, size_t width, size_t channels) {
+nn_t new_nn(size_t input_rows, size_t input_cols, size_t channels) {
   nn_t nn = (nn_t) {
     .layer_count = 1,
     .capacity = 10,
@@ -257,8 +258,8 @@ nn_t new_nn(size_t height, size_t width, size_t channels) {
 
   nn.layers[0].kind = _INPUT;
   nn.layers[0].il.input = NULL;
-  nn.layers[0].il.width = width;
-  nn.layers[0].il.height = height;
+  nn.layers[0].il.width = input_cols;
+  nn.layers[0].il.height = input_rows;
   nn.layers[0].il.channels = channels;
 
   return nn;
@@ -328,9 +329,19 @@ void nn_destroy(nn_t *nn) {
       case _INPUT:
         nn->layers[l].il.input = NULL;
         break;
+      case CONV2D:
+        destroy_conv2d_layer(&nn->layers[l].cl);
+        break;
+      case MAX_POOL:
+      case AVG_POOL:
+        destroy_pooling_layer(&nn->layers[l].pl);
+        break;
+      case FLATTEN:
+        destroy_flatten_layer(&nn->layers[l].fl);
+        break;
       default:
         assert(0 && "unreachable");
-    }
+      }
   }
 
   free(nn->layers);
@@ -387,7 +398,6 @@ void nn_compile(nn_t *nn) {
       case CONV2D:
         height = (height - layer->cl.kernels[0].rows + 2 * layer->cl.padding) / layer->cl.stride + 1;
         width = (width - layer->cl.kernels[0].cols + 2 * layer->cl.padding) / layer->cl.stride + 1;
-
         for (size_t i = 0; i < layer->cl.kernel_count; ++i) {
           layer->cl.a[i] = new_Mat2D(height, width);
         }
@@ -412,11 +422,11 @@ void nn_compile(nn_t *nn) {
   }
 }
 
-void nn_forward(nn_t *nn, const Mat2D *input) {
+void nn_forward(nn_t *nn, const Mat2D *input, size_t channels) {
   assert(nn->layers[0].kind == _INPUT);
 
-  Mat2D m = *input;
-  Mat2D ws_t;
+  const Mat2D *m = input;
+  Mat2D ws_t, conv_aux;
   nn->layers[0].il.input = input;
 
   for (size_t l = 1; l < nn->layer_count; ++l) {
@@ -424,20 +434,44 @@ void nn_forward(nn_t *nn, const Mat2D *input) {
     switch (layer.kind) {
       case DENSE:
         ws_t = transpose_Mat2D(&layer.dl.ws);
-        Mat2D_col_mul(&ws_t, &m, &layer.dl.a);
+        Mat2D_col_mul(&ws_t, m, &layer.dl.a);
         destroy_Mat2D(&ws_t);
 
         add_column_scalar(&layer.dl.a, layer.dl.bias);
         activate_col(&layer.dl.a, layer.act);
-        m = layer.dl.a;
+        m = &nn->layers[l].dl.a;
         break;
       case CONV2D:
+        conv_aux = new_Mat2D(layer.cl.a[0].rows, layer.cl.a[0].cols);
+        for (size_t k = 0; k < layer.cl.kernel_count; ++k) {
+          zero_init_Mat2D(&layer.cl.a[k]);
+          for (size_t c = 0; c < channels; ++c) {
+            convolution2D(&m[c], &layer.cl.kernels[k * channels + c], layer.cl.stride, layer.cl.padding, &conv_aux);
+            sum_Mat2D(&layer.cl.a[k], &conv_aux);
+          }
+          add_scalar_Mat2D(&layer.cl.a[k], layer.cl.bias[k]);
+        }
+        destroy_Mat2D(&conv_aux);
+        channels = layer.cl.kernel_count;
+        m = nn->layers[l].cl.a;
         break;
       case MAX_POOL:
+        for (size_t c = 0; c < channels; ++c) {
+          max_pooling2D(&m[c], &layer.pl.a[c], layer.pl.pool_size);
+        }
+        m = nn->layers[l].pl.a;
         break;
       case AVG_POOL:
+        for (size_t c = 0; c < channels; ++c) {
+          avg_pooling2D(&m[c], &layer.pl.a[c], layer.pl.pool_size);
+        }
+        m = nn->layers[l].pl.a;
         break;
       case FLATTEN:
+        for (size_t c = 0; c < channels; ++c) {
+          memcpy(&layer.fl.a.elems[c * m[c].cols * m[c].rows], &m[c], sizeof(double) * m[c].rows * m[c].cols);
+        }
+        m = &nn->layers[l].fl.a;
         break;
       default:
         assert("unreachable" && 0);
@@ -521,7 +555,7 @@ void nn_fit(nn_t *nn, const Mat2D *train_data, const Mat2D *labels, size_t batch
       .elems = &labels->elems[i * labels->cols],
     };
 
-    nn_forward(nn, &x);
+    nn_forward(nn, &x, 1);
     nn_t g = nn_backprop(nn, &y);
     nn_add_gradient(&total_g, &g);
 

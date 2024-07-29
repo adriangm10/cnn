@@ -42,13 +42,13 @@ void forward_test() {
     .elems = i1,
   };
 
-  nn_forward(&nn, &input);
+  nn_forward(&nn, &input, 1);
 
   Mat2D out = NN_OUTPUT(nn);
   assert(out.elems[0] == 0.0);
 
   input.elems = i2;
-  nn_forward(&nn, &input);
+  nn_forward(&nn, &input, 1);
 
   out = NN_OUTPUT(nn);
   assert(out.elems[0] == 1.0);
@@ -94,7 +94,7 @@ void backprop_test() {
     .elems = i1,
   };
 
-  nn_forward(&nn, &input);
+  nn_forward(&nn, &input, 1);
   assert(nn.layers[0].il.input != NULL);
   assert(fabs(nn.layers[1].dl.a.elems[0] - 0.593269992) <= 5e-9 && fabs(nn.layers[1].dl.a.elems[1] - 0.596884378) <= 5e-9);
   Mat2D out = NN_OUTPUT(nn);

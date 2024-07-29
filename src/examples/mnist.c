@@ -152,7 +152,7 @@ int main(void) {
   printf("first img expected output: ");
   print_Mat2D(&((Mat2D) {labels.cols, 1, &labels.elems[first_img * labels.cols]}), "");
 
-  nn_forward(&mnist_nn, &((Mat2D) {1, imgs.cols, img}));
+  nn_forward(&mnist_nn, &((Mat2D) {1, imgs.cols, img}), 1);
   Mat2D o1 = nn_output(&mnist_nn);
   printf("got (before training): ");
   print_Mat2D(&o1, "\n");
@@ -161,7 +161,7 @@ int main(void) {
     nn_fit(&mnist_nn, &imgs, &labels, 1, 1.0);
   }
 
-  nn_forward(&mnist_nn, &((Mat2D) {1, imgs.cols, img}));
+  nn_forward(&mnist_nn, &((Mat2D) {1, imgs.cols, img}), 1);
   o1 = nn_output(&mnist_nn);
   printf("got (after training): ");
   print_Mat2D(&o1, "\n");
