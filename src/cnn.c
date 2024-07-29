@@ -99,8 +99,13 @@ static layer_t new_conv2d_layer(size_t kernel_count, size_t kernel_size, size_t 
     .padding = padding,
     .stride = stride,
     .kernels = (Mat2D *) malloc(sizeof(Mat2D) * kernel_count * channels),
+    .bias = (double *) malloc(sizeof(double) * kernel_count),
     .a = NULL,
   };
+
+  for (size_t k = 0; k < kernel_count * channels; ++k) {
+    cl.kernels[k] = new_Mat2D(kernel_size, kernel_size);
+  }
 
   return (layer_t) {
     .kind = CONV2D,
@@ -115,6 +120,8 @@ static void destroy_conv2d_layer(Conv2dLayer *l) {
   }
   free(l->kernels);
   l->kernels = NULL;
+  free(l->bias);
+  l->bias = NULL;
 
   if (!l->a) return;
   for (size_t a = 0; a < l->kernel_count; ++a) {
@@ -261,24 +268,50 @@ void nn_init_random(nn_t *nn, const double min, const double max) {
   const double diff = max - min;
 
   for (size_t l = 1; l < nn->layer_count; ++l) {
-    switch (nn->layers[l].kind) {
+    layer_t *layer = &nn->layers[l];
+    switch (layer->kind) {
       case DENSE:
-        random_init_Mat2D(&nn->layers[l].dl.ws, min, max);
-        nn->layers[l].dl.bias = (double) random() / (double) RAND_MAX * diff + min;
+        random_init_Mat2D(&layer->dl.ws, min, max);
+        layer->dl.bias = (double) random() / (double) RAND_MAX * diff + min;
+        break;
+      case CONV2D:
+        for (size_t k = 0; k < layer->cl.kernel_count * layer->cl.channels; ++k) {
+          random_init_Mat2D(&layer->cl.kernels[k], min, max);
+        }
+        for (size_t k = 0; k < layer->cl.kernel_count; ++k) {
+          layer->cl.bias[k] = (double) random() / (double) RAND_MAX * diff + min;
+        }
+        break;
+      case MAX_POOL:
+      case AVG_POOL:
+      case FLATTEN:
         break;
       default:
         assert("unreachable" && 0);
-    }
+      }
   }
 }
 
 void nn_init_zero(nn_t *nn) {
   for (size_t l = 1; l < nn->layer_count; ++l) {
-    switch (nn->layers[l].kind) {
+    layer_t *layer = &nn->layers[l];
+    switch (layer->kind) {
       case DENSE:
         zero_init_Mat2D(&nn->layers[l].dl.ws);
         zero_init_Mat2D(&nn->layers[l].dl.a);
         nn->layers[l].dl.bias = 0.0;
+        break;
+      case CONV2D:
+        for (size_t k = 0; k < layer->cl.kernel_count * layer->cl.channels; ++k) {
+          zero_init_Mat2D(&layer->cl.kernels[k]);
+        }
+        for (size_t k = 0; k < layer->cl.kernel_count; ++k) {
+          layer->cl.bias[k] = 0.0;
+        }
+        break;
+      case MAX_POOL:
+      case AVG_POOL:
+      case FLATTEN:
         break;
       default:
         assert("unreachable" && 0);
@@ -363,8 +396,8 @@ void nn_compile(nn_t *nn) {
       case MAX_POOL:
       case AVG_POOL:
         layer->pl.channels = channels;
-        width = width / layer->pl.pool_size;
-        height = height / layer->pl.pool_size;
+        width /= layer->pl.pool_size;
+        height /= layer->pl.pool_size;
 
         for (size_t c = 0; c < channels; ++c) {
           layer->pl.a[c] = new_Mat2D(height, width);

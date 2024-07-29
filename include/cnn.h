@@ -40,6 +40,7 @@ typedef struct {
   int stride;
   Mat2D *kernels;
   Mat2D *a;
+  double *bias;
 } Conv2dLayer;
 
 typedef struct {
