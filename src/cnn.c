@@ -101,7 +101,7 @@ static layer_t new_conv2d_layer(size_t kernel_count, size_t kernel_size, size_t 
     .stride = stride,
     .kernels = (Mat2D *) malloc(sizeof(Mat2D) * kernel_count * channels),
     .bias = (double *) malloc(sizeof(double) * kernel_count),
-    .a = NULL,
+    .a = (Mat2D *) malloc(sizeof(Mat2D) * kernel_count),
   };
 
   for (size_t k = 0; k < kernel_count * channels; ++k) {
@@ -124,7 +124,6 @@ static void destroy_conv2d_layer(Conv2dLayer *l) {
   free(l->bias);
   l->bias = NULL;
 
-  if (!l->a) return;
   for (size_t a = 0; a < l->kernel_count; ++a) {
     destroy_Mat2D(&l->a[a]);
   }
@@ -146,10 +145,13 @@ static layer_t new_pooling_layer(size_t pool_size, enum layer_kind kind) {
 }
 
 static void destroy_pooling_layer(PoolingLayer *l) {
-  for (size_t a = 0; a < l->channels; ++a) {
-    destroy_Mat2D(&l->a[a]);
+  if (l->a) {
+    for (size_t a = 0; a < l->channels; ++a) {
+      destroy_Mat2D(&l->a[a]);
+    }
+    free(l->a);
   }
-  free(l->a);
+
   l->a = NULL;
   l->channels = -1;
 };
@@ -409,6 +411,7 @@ void nn_compile(nn_t *nn) {
         width /= layer->pl.pool_size;
         height /= layer->pl.pool_size;
 
+        layer->pl.a = (Mat2D *) malloc(sizeof(Mat2D) * channels);
         for (size_t c = 0; c < channels; ++c) {
           layer->pl.a[c] = new_Mat2D(height, width);
         }
@@ -442,6 +445,8 @@ void nn_forward(nn_t *nn, const Mat2D *input, size_t channels) {
         m = &nn->layers[l].dl.a;
         break;
       case CONV2D:
+        assert(layer.cl.channels == channels);
+
         conv_aux = new_Mat2D(layer.cl.a[0].rows, layer.cl.a[0].cols);
         for (size_t k = 0; k < layer.cl.kernel_count; ++k) {
           zero_init_Mat2D(&layer.cl.a[k]);
@@ -469,7 +474,7 @@ void nn_forward(nn_t *nn, const Mat2D *input, size_t channels) {
         break;
       case FLATTEN:
         for (size_t c = 0; c < channels; ++c) {
-          memcpy(&layer.fl.a.elems[c * m[c].cols * m[c].rows], &m[c], sizeof(double) * m[c].rows * m[c].cols);
+          memcpy(&layer.fl.a.elems[c * m[c].cols * m[c].rows], m[c].elems, sizeof(double) * m[c].rows * m[c].cols);
         }
         m = &nn->layers[l].fl.a;
         break;
