@@ -153,9 +153,9 @@ int main(void) {
   print_Mat2D(&((Mat2D) {labels.cols, 1, &labels.elems[first_img * labels.cols]}), "");
 
   nn_forward(&mnist_nn, &((Mat2D) {1, imgs.cols, img}), 1);
-  Mat2D o1 = nn_output(&mnist_nn);
+  const Mat2D *o1 = nn_output(&mnist_nn);
   printf("got (before training): ");
-  print_Mat2D(&o1, "\n");
+  print_Mat2D(o1, "\n");
 
   for (int e = 0; e < MAX_EPOCH; ++e) {
     nn_fit(&mnist_nn, &imgs, &labels, 1, 1.0);
@@ -164,7 +164,7 @@ int main(void) {
   nn_forward(&mnist_nn, &((Mat2D) {1, imgs.cols, img}), 1);
   o1 = nn_output(&mnist_nn);
   printf("got (after training): ");
-  print_Mat2D(&o1, "\n");
+  print_Mat2D(o1, "\n");
 
   destroy_Mat2D(&labels);
   destroy_Mat2D(&imgs);

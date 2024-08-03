@@ -78,7 +78,7 @@ void nn_add_flatten_layer(nn_t *nn);
 void nn_add_max_pooling_layer(nn_t *nn, size_t pool_size);
 void nn_add_avg_pooling_layer(nn_t *nn, size_t pool_size);
 
-// channels = previous layer's output depth (the previous layer's number of kernels for example)
+// channels = previous layer's output depth
 void nn_add_conv2d_layer(nn_t *nn, size_t kernel_count, size_t kernel_size, size_t channels, int padding, int stride, ActFun act);
 
 void nn_forward(nn_t *nn, const Mat2D *input, size_t channels);
@@ -86,7 +86,7 @@ void nn_destroy(nn_t *nn);
 void nn_init_random(nn_t *nn, const double min, const double max);
 void nn_init_zero(nn_t *nn);
 nn_t nn_backprop(const nn_t *nn, const Mat2D *y);
-Mat2D nn_layer_output(const layer_t *l);
-Mat2D nn_output(const nn_t *nn);
+const Mat2D *nn_layer_output(const layer_t *l);
+const Mat2D *nn_output(const nn_t *nn);
 void nn_fit(nn_t *nn, const Mat2D *train_data, const Mat2D *labels, size_t batch_size, double lr);
 void nn_compile(nn_t *nn);

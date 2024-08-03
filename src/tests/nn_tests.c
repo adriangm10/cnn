@@ -271,7 +271,7 @@ void conv_forward_test() {
 }
 
 int main(void) {
-  test_t tests[] = {forward_test, backprop_test, fit_test, compile_test};
-  run_tests(tests, 4);
+  test_t tests[] = {forward_test, backprop_test, fit_test, compile_test, conv_forward_test};
+  run_tests(tests, 5);
   return 0;
 }

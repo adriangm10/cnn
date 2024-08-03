@@ -45,24 +45,24 @@ int main(void) {
   }
 
   nn_forward(&xor_nn, &((Mat2D) { 1, 2, table_input }), 1);
-  Mat2D o1 = nn_output(&xor_nn);
+  const Mat2D *o1 = nn_output(&xor_nn);
   puts("first input: {0, 0}, expected: 0, result:");
-  print_Mat2D(&o1, "\n\n");
+  print_Mat2D(o1, "\n\n");
 
   nn_forward(&xor_nn, &((Mat2D) { 1, 2, &table_input[2] }), 1);
-  Mat2D o2 = nn_output(&xor_nn);
+  const Mat2D *o2 = nn_output(&xor_nn);
   puts("second input: {0, 1}, expected: 1, result:");
-  print_Mat2D(&o2, "\n\n");
+  print_Mat2D(o2, "\n\n");
 
   nn_forward(&xor_nn, &((Mat2D) { 1, 2, &table_input[4] }), 1);
-  Mat2D o3 = nn_output(&xor_nn);
+  const Mat2D *o3 = nn_output(&xor_nn);
   puts("third input: {1, 0}, expected: 1, result:");
-  print_Mat2D(&o3, "\n\n");
+  print_Mat2D(o3, "\n\n");
 
   nn_forward(&xor_nn, &((Mat2D) { 1, 2, &table_input[6] }), 1);
-  Mat2D o4 = nn_output(&xor_nn);
+  const Mat2D *o4 = nn_output(&xor_nn);
   puts("fourth input: {1, 1}, expected: 0, result:");
-  print_Mat2D(&o4, "\n\n");
+  print_Mat2D(o4, "\n\n");
 
   nn_destroy(&xor_nn);
   return 0;
